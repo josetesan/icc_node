@@ -31,20 +31,31 @@ function debit(response,msisdn , content_code) {
 		console.log("Debiting '%s'  for '%s'", msisdn, amount);
 		client.get('customer:'+msisdn, function ( err, data) {
 			response.writeHead(200, {'Content-Type':'text/xml'});
-			var balance = data.split(":")[1];
-			if (parseInt(balance) >= parseInt(amount) ) {
-				var newBalance = parseInt(balance) - parseInt(amount);
-				client.set('customer:'+msisdn, 'balance:'+newBalance);
-				console.log("User '%s' new balance is '%s'", msisdn, newBalance);
-			        response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
-			        response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
-			        response.write('<result>0</result><account_id>'+msisdn.substr(3)+'</account_id>');
-			        response.write('<credit_balance>'+newBalance+'</credit_balance>');
-			        response.write('<acc_status>ACTIVE</acc_status>');
-			        response.write('</cp_reply>\r\n');
+			if (err) {
+					console.log("User '%s' not found", msisdn);
+					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
+					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
+					response.write('<result>201/result>');
+					response.write('</cp_reply>\r\n');
 			} else {
-				console.log("User '%s' has not enough money, as balance is '%s'",msisdn, balance);
-				response.write(balance+"\r\n");
+				var balance = data.split(":")[1];
+				if (parseInt(balance) >= parseInt(amount) ) {
+					var newBalance = parseInt(balance) - parseInt(amount);
+					client.set('customer:'+msisdn, 'balance:'+newBalance);
+					console.log("User '%s' new balance is '%s'", msisdn, newBalance);
+					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
+					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
+					response.write('<result>0</result><account_id>'+msisdn.substr(3)+'</account_id>');
+					response.write('<credit_balance>'+newBalance+'</credit_balance>');
+					response.write('<acc_status>ACTIVE</acc_status>');
+					response.write('</cp_reply>\r\n');
+				} else {
+					console.log("User '%s' has not enough money, as balance is '%s'",msisdn, balance);
+					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
+					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
+					response.write('<result>10</result>');
+					response.write('</cp_reply>\r\n');
+				}
 			}
 			response.end();
 		});
