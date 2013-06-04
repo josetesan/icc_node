@@ -45,9 +45,12 @@ function debit(response,msisdn , content_code) {
 					console.log("User '%s' new balance is '%s'", msisdn, newBalance);
 					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
-					response.write('<result>0</result><account_id>'+msisdn.substr(3)+'</account_id>');
-					response.write('<credit_balance>'+newBalance+'</credit_balance>');
-					response.write('<acc_status>ACTIVE</acc_status>');
+					response.write('<op_transaction_id>'+parseLong(Math.random()*9999999999999)+'</op_transaction_id>');
+					response.write('<service_units kind="Granted">');
+					response.write('<svc_unit u_type="0">1</svc_unit>');
+					response.write('</service_units>');
+					response.write('<cost_information>'+amount+'</cost_information>');
+					response.write('<result>0</result>');
 					response.write('</cp_reply>\r\n');
 				} else {
 					console.log("User '%s' has not enough money, as balance is '%s'",msisdn, balance);
