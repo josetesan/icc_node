@@ -22,7 +22,7 @@ function onRequest(request, response) {
 
 function debit(response,msisdn , content_code) {
     
-    client.get('contentcode:'+content_code, function ( err, data) {
+    client.hget('contentcodes','code:'+content_code, function ( err, data) {
     	if (err) {
          	response.writeHead(500, {'Content-Type':'text/plain'});
          	response.write("Error found "+err);
