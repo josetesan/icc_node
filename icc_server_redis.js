@@ -1,6 +1,7 @@
 var http = require('http');
 var client = require("redis").createClient();
 var xmlDocument = require("xmldoc").XmlDocument;
+var log = require('fs').createWriteStream('log.txt', {'flags': 'a'});
 
 function onRequest(request, response) {
 
@@ -13,7 +14,7 @@ function onRequest(request, response) {
         if (content_code) {
     	    debit(response,msisdn, content_code.val);
         } else {
-	   		 getBalance(response,msisdn);
+	 getBalance(response,msisdn);
         }
    });
 };
@@ -23,14 +24,14 @@ function debit(response,msisdn , content_code) {
     
     client.get('contentcode:'+content_code, function ( err, data) {
     	if (err) {
-    	    console.log("Error, content code not found,"+err);
+    	    log.write("Error, content code not found,"+err);
     	} else {
 			var amount = data.split(":")[1];
-			console.log("Debiting '%s'  for '%s'", msisdn, amount);
+			log.write("Debiting '%s'  for '%s'", msisdn, amount);
 			client.get('customer:234'+msisdn, function ( err, data) {
 				response.writeHead(200, {'Content-Type':'text/xml'});
 				if (err) {
-						console.log("User '%s' not found", msisdn);
+						log.write("User '%s' not found", msisdn);
 						response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 						response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 						response.write('<result>201/result>');
@@ -40,7 +41,7 @@ function debit(response,msisdn , content_code) {
 					if (parseInt(balance) >= parseInt(amount) ) {
 						var newBalance = parseInt(balance) - parseInt(amount);
 						client.set('customer:234'+msisdn, 'balance:'+newBalance);
-						console.log("User '%s' new balance is '%s'", msisdn, newBalance);
+						log.write("User '%s' new balance is '%s'", msisdn, newBalance);
 						response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 						response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 						response.write('<op_transaction_id>'+parseInt(Math.random()*999999999)+'</op_transaction_id>');
@@ -51,7 +52,7 @@ function debit(response,msisdn , content_code) {
 						response.write('<result>0</result>');
 						response.write('</cp_reply>\r\n');
 					} else {
-						console.log("User '%s' has not enough money, as balance is '%s'",msisdn, balance);
+						log.write("User '%s' has not enough money, as balance is '%s'",msisdn, balance);
 						response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 						response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 						response.write('<result>10</result>');
@@ -73,7 +74,7 @@ function getBalance(response,msisdn) {
         } else {
     	    var balance = data.split(":")[1];
     	    response.write(balance);
-    	    console.log("Saldo de '%s' es '%s'",msisdn, balance); 
+    	    log.write("Saldo de '%s' es '%s'",msisdn, balance); 
         }
         response.end();
         });
@@ -84,5 +85,4 @@ client.on("connect", function () {
 });
 
 http.createServer(onRequest).listen(8887);
-
 console.log('Server running at http://127.0.0.1:8887');
