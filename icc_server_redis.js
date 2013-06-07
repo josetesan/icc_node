@@ -94,6 +94,15 @@ client.on("connect", function () {
     console.log('Connected to redis');
 });
 
+client.on("end", function() {
+    console.log("Closing redis");
+});
+
+//http.on("close", function() {
+//    console.log(dateFormat()+"| Server closed");
+//    client.quit();
+//});
+
 http.createServer(onRequest).listen(8887);
 console.log('Server running at http://127.0.0.1:8887');
 log.write(dateFormat()+"| Server started\n");
