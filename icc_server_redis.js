@@ -9,13 +9,15 @@ function onRequest(request, response) {
     request.addListener("data", function(chunk) {	request.content += chunk;    });
 
     request.addListener("end", function() {
-        var peticion = new xmlDocument(request.content);
+		var peticion = new xmlDocument(request.content);
         var msisdn = peticion.childNamed('user_id').val;
         var content_code = peticion.childNamed('service_identifier');
-        if (content_code) {
-    	    debit(response,msisdn, content_code.val);
-        } else {
-	 getBalance(response,msisdn);
+        var r_parameter = peticion.childNamed('r_parameter');
+        if (r_parameter ) content_code = r_parameter;
+        if (content_code ) {
+			debit(response,msisdn, content_code.val);
+    	} else {
+			getBalance(response,msisdn);
         }
    });
 };
@@ -23,7 +25,7 @@ function onRequest(request, response) {
 
 function debit(response,msisdn , content_code) {
     
-    client.hget('contentcodes','code:'+content_code, function ( err, data) {
+		client.hget('contentcodes','code:'+content_code, function ( err, data) {
     	if (err) {
          	response.writeHead(500, {'Content-Type':'text/plain'});
          	response.write("Error found "+err);
@@ -39,7 +41,7 @@ function debit(response,msisdn , content_code) {
 					log.write(dateFormat()+"| Error on finding user "+msisdn+"\n");
 					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
-					response.write('<result>999/result>');
+					response.write('<result>999</result>');
 					response.write('</cp_reply>');
 				} else {
 					if (data) {
@@ -68,13 +70,14 @@ function debit(response,msisdn , content_code) {
 					log.write(dateFormat()+"| User "+msisdn+" not found\n");
 					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
-					response.write('<result>201/result>');
+					response.write('<result>201</result>');
 					response.write('</cp_reply>');
 				}
 			  }
 			  response.end();
 			});
 	  } else {
+			log.write(dateFormat()+"| Content code  "+content_code+" not found\n");
 	       	response.writeHead(500, {'Content-Type':'text/plain'});
          	response.write("Error, content code "+content_code+" does not exist\n");
          	response.end();
@@ -105,7 +108,6 @@ client.on("connect", function () {
 client.on("end", function() {
     console.log("Closing redis");
 });
-
 /*
 var server = http.createServer(onRequest);
 
@@ -116,7 +118,7 @@ server.on("close", function() {
 
 server.listen(8887);
 */
-
 http.createServer(onRequest).listen(8887);
 console.log('Server running at http://127.0.0.1:8887');
-log.write(dateFormat()+"| Server started\n");
+log.write(dateFormat()+"| Server started on port 8887\n");
+
