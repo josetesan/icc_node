@@ -1,8 +1,7 @@
 var http = require('http');
-var dateFormat = require('dateformat');
 var client = require("redis").createClient();
 var xmlDocument = require("xmldoc").XmlDocument;
-var log = require('fs').createWriteStream('log.txt', {'flags': 'a'});
+var winston = require('winston');
 
 function onRequest(request, response) {
 
@@ -25,20 +24,20 @@ function onRequest(request, response) {
 
 function debit(response,msisdn , content_code) {
     
-		client.hget('contentcodes','code:'+content_code, function ( err, data) {
+	client.hget('contentcodes','code:'+content_code, function ( err, data) {
     	if (err) {
          	response.writeHead(500, {'Content-Type':'text/plain'});
          	response.write("Error found "+err);
          	response.end();
-    	    log.write(dateFormat()+"| Error found,"+err+"\n");
+    	    logger.info("| Error found,"+err+"\n");
     	} else {
     	if (data) {
 			var amount = data.split(":")[1];
-			log.write(dateFormat()+ "| Debiting "+msisdn+" for "+amount+"\n");
+			logger.info( "| Debiting "+msisdn+" for "+amount+"\n");
 			client.get('customer:234'+msisdn, function ( err, data) {
 				response.writeHead(200, {'Content-Type':'text/xml'});
 				if (err) {
-					log.write(dateFormat()+"| Error on finding user "+msisdn+"\n");
+					logger.info("| Error on finding user "+msisdn+"\n");
 					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 					response.write('<result>999</result>');
@@ -49,7 +48,7 @@ function debit(response,msisdn , content_code) {
 						if (parseInt(balance) >= parseInt(amount) ) {
 							var newBalance = parseInt(balance) - parseInt(amount);
 							client.set('customer:234'+msisdn, 'balance:'+newBalance);
-							log.write(dateFormat() +"| User "+msisdn+" new balance is "+newBalance+"\n");
+							logger.info(dateFormat() +"| User "+msisdn+" new balance is "+newBalance+"\n");
 							response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 							response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 							response.write('<op_transaction_id>'+parseInt(Math.random()*999999999)+'</op_transaction_id>');
@@ -60,14 +59,14 @@ function debit(response,msisdn , content_code) {
 							response.write('<result>0</result>');
 							response.write('</cp_reply>');
 						} else {
-							log.write(dateFormat()+"| User "+msisdn+"  has not enough money, as balance is "+balance+"\n");
+							logger.info("| User "+msisdn+"  has not enough money, as balance is "+balance+"\n");
 							response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 							response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 							response.write('<result>10</result>');
 							response.write('</cp_reply>');
 						}
 				  } else {
-					log.write(dateFormat()+"| User "+msisdn+" not found\n");
+					logger.info("| User "+msisdn+" not found\n");
 					response.write('<?xml version="1.0"?><!DOCTYPE cp_reply SYSTEM "cp_reply.dtd">');
 					response.write('<cp_reply><cp_id>PEngine</cp_id><cp_transaction_id>test-'+parseInt(Math.random()*100000000)+'</cp_transaction_id>');
 					response.write('<result>201</result>');
@@ -77,7 +76,7 @@ function debit(response,msisdn , content_code) {
 			  response.end();
 			});
 	  } else {
-			log.write(dateFormat()+"| Content code  "+content_code+" not found\n");
+			logger.info("| Content code  "+content_code+" not found\n");
 	       	response.writeHead(500, {'Content-Type':'text/plain'});
          	response.write("Error, content code "+content_code+" does not exist\n");
          	response.end();
@@ -95,7 +94,7 @@ function getBalance(response,msisdn) {
         } else {
     	    var balance = data.split(":")[1];
     	    response.write(balance);
-    	    log.write(dateFormat()+"| Saldo de "+msisdn+" is "+balance+"\n");
+    	    logger.info("| Saldo de "+msisdn+" is "+balance+"\n");
         }
         response.end();
         });
@@ -112,13 +111,25 @@ client.on("end", function() {
 var server = http.createServer(onRequest);
 
 server.on("close", function() {
-    console.log(dateFormat()+"| Server closed");
+    console.log("| Server closed");
     client.quit();
 });
 
 server.listen(8887);
 */
+
+var logger = new (winston.Logger)({
+  transports: [
+    new winston.transports.File({ filename: 'icc_server.log', json: false })
+  ],
+  exceptionHandlers: [
+    new winston.transports.File({ filename: 'exceptions.log', json: false })
+  ],
+  exitOnError: false
+});
+
+
 http.createServer(onRequest).listen(8887);
 console.log('Server running at http://127.0.0.1:8887');
-log.write(dateFormat()+"| Server started on port 8887\n");
+logger.info(" Server started on port 8887\n");
 
